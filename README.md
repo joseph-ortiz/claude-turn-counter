@@ -5,6 +5,8 @@ window healthy. It puts a **live turn counter in your status bar** and gives you
 gentle, non-blocking reminder** when a session runs long — so you can `/compact` or start
 fresh *before* quality degrades, instead of noticing too late.
 
+![demo](assets/demo.gif)
+
 ```
 [your existing status bar]   ●  Turn 16/20
 ```
@@ -75,6 +77,11 @@ Two Claude Code facts it relies on:
 - **A Stop hook that prints `{"systemMessage": "..."}` warns without interrupting**;
   `{"decision": "block"}` would force the model to continue. This tool only ever uses
   `systemMessage`.
+
+## Contributing
+
+Small, dependency-free, hard to break — see [CONTRIBUTING.md](CONTRIBUTING.md) for the
+philosophy, the two invariants, and how to test hooks against a throwaway config dir.
 
 ## License
 
