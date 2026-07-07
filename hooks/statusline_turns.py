@@ -7,14 +7,23 @@ the .claude dir). If present, we run it first with the same stdin and print its
 output, then append our turn segment. If absent, we print only the segment.
 
 Env:
-  WARN_LIMIT  (default 15)  -> yellow threshold + reminder turn
-  TURN_LIMIT  (default 20)  -> red "WRAP UP" threshold
+  WARN_LIMIT  (default 15)     -> yellow threshold + reminder turn
+  TURN_LIMIT  (default 20)     -> red "WRAP UP" threshold
+  TURN_DOCK   (default right)  -> "right" pads so the turn segment sits flush at the
+                                  terminal's right edge; "left" appends after the
+                                  wrapped output (the old behavior). Right-docking needs
+                                  a known terminal width (COLUMNS or a tty); when width
+                                  is unknown it falls back to left automatically.
 Never raises: on any error it prints just the segment (or nothing) so the bar survives.
 """
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
+
+ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CLAUDE_DIR = os.path.dirname(HERE)  # hooks/ lives inside the .claude dir
@@ -31,6 +40,23 @@ def env_int(name, default):
         return int(os.environ.get(name, default))
     except (TypeError, ValueError):
         return default
+
+
+def visible_len(s):
+    """Character width ignoring ANSI color escapes."""
+    return len(ANSI_RE.sub("", s))
+
+
+def term_width():
+    """Best-effort terminal width; 0 when genuinely unknown (so we skip docking)."""
+    cols = env_int("COLUMNS", 0)
+    if cols > 0:
+        return cols
+    try:
+        cols = shutil.get_terminal_size(fallback=(0, 0)).columns
+    except Exception:
+        cols = 0
+    return cols if cols > 0 else 0
 
 
 def count_turns(transcript_path):
@@ -86,7 +112,17 @@ def main():
             segment = "%s●%s  Turn %d/%d%s" % (GREEN, RESET + GREEN, n, limit, RESET)
 
     if out and segment:
-        sys.stdout.write(out.rstrip("\n") + "  " + segment)
+        out = out.rstrip("\n")
+        dock = os.environ.get("TURN_DOCK", "right").strip().lower()
+        width = term_width() if dock != "left" else 0
+        # Pad so the segment sits flush at the right edge; +2 keeps a min gap so it
+        # never collides with the wrapped output. Fall back to a 2-space join when the
+        # width is unknown or too narrow to dock without overlap.
+        pad = width - visible_len(out) - visible_len(segment)
+        if dock != "left" and width and pad >= 2:
+            sys.stdout.write(out + (" " * pad) + segment)
+        else:
+            sys.stdout.write(out + "  " + segment)
     elif segment:
         sys.stdout.write(segment)
     elif out:
