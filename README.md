@@ -60,7 +60,6 @@ Set thresholds via environment variables (defaults 15 / 20):
 |-----|---------|--------|
 | `WARN_LIMIT` | 15 | yellow color + the one-time reminder |
 | `TURN_LIMIT` | 20 | red `— WRAP UP` color |
-| `TURN_DOCK` | `right` | `right` pads so the counter sits flush at the terminal's right edge; `left` appends it right after your existing status bar. Right-docking needs a known terminal width (`COLUMNS` or a tty) and falls back to `left` automatically when width is unknown. |
 
 ## How it works
 
